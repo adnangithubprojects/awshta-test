@@ -67,12 +67,12 @@ export function CategoryForm({
       />
 
       <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <label className=" text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
           <Layers size={13} /> Parent Category (Optional)
         </label>
         <select
           {...register("parent_id")}
-          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-secondary outline-none focus:border-primary/40 focus:bg-white transition-all cursor-pointer"
+          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-primary outline-none focus:border-primary/40 focus:bg-white transition-all cursor-pointer"
         >
           <option value="">None (Root Category)</option>
           {filteredParents.map((cat: any) => (
@@ -86,7 +86,7 @@ export function CategoryForm({
       <button
         type="submit"
         disabled={isPending}
-        className="w-full bg-secondary text-white py-3.5 rounded-2xl font-bold hover:bg-primary transition-all disabled:opacity-60 cursor-pointer"
+        className="w-full bg-primary text-white py-3.5 rounded-2xl font-bold hover:bg-primary/90 transition-all disabled:opacity-60 cursor-pointer"
       >
         {isPending ? "Saving Variant..." : "Save Category"}
       </button>

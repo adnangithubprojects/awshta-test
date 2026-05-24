@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 
+type TAddressRow = {
+  id: string;
+  label?: string;
+};
+
 export function AddressRowActions({
   address,
   onDelete,
 }: {
-  address: any;
-  onDelete: (address: any) => void;
+  address: TAddressRow;
+  onDelete: (address: TAddressRow) => void;
 }) {
   const [open, setOpen] = useState(false);
 

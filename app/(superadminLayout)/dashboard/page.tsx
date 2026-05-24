@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthstore";
+import { useGetDashboardSummary } from "@/api/orders/queries";
 // import { useGetDashboardSummary } from "@/api/orders/queries";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

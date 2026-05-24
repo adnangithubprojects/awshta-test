@@ -4,8 +4,10 @@ import { persist } from "zustand/middleware";
 
 type TAuthStore = {
   user: TPublicUser | null;
+  token: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: TPublicUser) => void;
+  setAuth: (user: TPublicUser, token: string, refreshToken: string) => void;
   clearAuth: () => void;
 };
 
@@ -16,10 +18,25 @@ export const useAuthStore = create<TAuthStore>()(
     (set) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
 
-      setAuth: (user) => set({ user, isAuthenticated: true }),
-      clearAuth: () => set({ user: null, isAuthenticated: false }),
+      setAuth: (user, token, refreshToken) =>
+        set({
+          user,
+          token,
+          refreshToken,
+          isAuthenticated: true,
+        }),
+      // setAuth: (user) => set({ user, isAuthenticated: true }),
+
+      clearAuth: () =>
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        }),
     }),
     {
       name: "auth-storage",

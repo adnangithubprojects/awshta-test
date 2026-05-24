@@ -1,30 +1,21 @@
 "use client";
 import { memo, useState } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  Plus,
-  Search,
-  User,
-  MapPin,
-  Shield,
-  Users,
-  Upload,
-} from "lucide-react";
+import { Plus, User, MapPin, Shield, Users, Upload } from "lucide-react";
 import { useToast } from "@/components/common/toast";
 import {
+  useAddAddress,
+  useDeleteAddress,
   useGetAddresses,
   useGetAllUsers,
   useGetMyProfile,
   useGetUserById,
+  useUpdateAvatar,
+  useUpdatePassword,
+  useUpdateProfile,
+  UserQueryKeys,
 } from "@/api/user/queries";
-import {
-  asyncAddAddress,
-  asyncDeleteAddress,
-  asyncUpdateAvatar,
-  asyncUpdatePassword,
-  asyncUpdateProfile,
-} from "@/api/user/fetchers";
 import {
   AddressForm,
   PasswordForm,
@@ -33,6 +24,22 @@ import {
 import { DataTable } from "@/components/common/table";
 import Modal from "@/components/common/modal";
 import { AddressRowActions } from "@/components/common/_components/userComponents/adressForm";
+import Image from "next/image";
+
+type TAddressRow = {
+  id: string;
+  label?: string;
+  street?: string;
+  city?: string;
+  country?: string;
+  is_default?: boolean;
+};
+
+type TUserRow = {
+  id: string;
+  name?: string;
+  email?: string;
+};
 
 const UsersPage = memo(function UsersPage() {
   const queryClient = useQueryClient();
@@ -45,7 +52,7 @@ const UsersPage = memo(function UsersPage() {
 
   // Modal states
   const [addressOpen, setAddressOpen] = useState(false);
-  const [deleteAddress, setDeleteAddress] = useState<any | null>(null);
+  const [deleteAddress, setDeleteAddress] = useState<TAddressRow | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // --- Fetch Queries ---
@@ -56,77 +63,112 @@ const UsersPage = memo(function UsersPage() {
 
   // Fetch specific user on demand
   const { data: singleUserData } = useGetUserById(selectedUserId || "");
+  const profile = profileData?.data?.data || profileData?.data || profileData;
+  const addresses =
+    addressesData?.data?.data || addressesData?.data || addressesData || [];
+  const users =
+    allUsersData?.data?.items ||
+    allUsersData?.data?.data ||
+    allUsersData?.data ||
+    [];
+  const selectedUser =
+    singleUserData?.data?.data || singleUserData?.data || singleUserData;
 
   // --- Core Cache Invalidation Hooks ---
   const invalidateAddresses = () =>
-    queryClient.invalidateQueries({ queryKey: ["addresses"] });
+    queryClient.invalidateQueries({ queryKey: [UserQueryKeys.ADDRESSES] });
   const invalidateProfile = () =>
-    queryClient.invalidateQueries({ queryKey: ["me"] });
+    queryClient.invalidateQueries({ queryKey: [UserQueryKeys.ME] });
+
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
 
   // --- Mutations Matrix ---
-  const addAddressMutation = useMutation({
-    mutationFn: asyncAddAddress,
-    onSuccess: () => {
-      invalidateAddresses();
-      setAddressOpen(false);
-      toast("Address added successfully", "success");
-    },
-    onError: (e: any) =>
-      toast(e?.message || "Error processing request", "error"),
-  });
+  const addAddressMutation = useAddAddress();
+  const deleteAddressMutation = useDeleteAddress();
+  const updateProfileMutation = useUpdateProfile();
+  const updatePasswordMutation = useUpdatePassword();
+  const avatarMutation = useUpdateAvatar();
 
-  const deleteAddressMutation = useMutation({
-    mutationFn: asyncDeleteAddress,
-    onSuccess: () => {
-      invalidateAddresses();
-      setDeleteAddress(null);
-      toast("Address deleted", "info");
-    },
-    onError: (e: any) => toast(e?.message || "Failed to remove entry", "error"),
-  });
+  const handleAddAddress = (
+    data: Parameters<typeof addAddressMutation.mutate>[0],
+  ) => {
+    addAddressMutation.mutate(data, {
+      onSuccess: () => {
+        invalidateAddresses();
+        setAddressOpen(false);
+        toast("Address added successfully", "success");
+      },
+      onError: (e) =>
+        toast(getErrorMessage(e, "Error processing request"), "error"),
+    });
+  };
 
-  const updateProfileMutation = useMutation({
-    mutationFn: asyncUpdateProfile,
-    onSuccess: () => {
-      invalidateProfile();
-      toast("Profile parameters updated", "success");
-    },
-    onError: (e: any) => toast(e?.message || "Update failure", "error"),
-  });
+  const handleDeleteAddress = () => {
+    if (!deleteAddress?.id) return;
+    deleteAddressMutation.mutate(deleteAddress.id, {
+      onSuccess: () => {
+        invalidateAddresses();
+        setDeleteAddress(null);
+        toast("Address deleted", "info");
+      },
+      onError: (e) =>
+        toast(getErrorMessage(e, "Failed to remove entry"), "error"),
+    });
+  };
 
-  const updatePasswordMutation = useMutation({
-    mutationFn: asyncUpdatePassword,
-    onSuccess: () => toast("Security keys renewed successfully", "success"),
-    onError: (e: any) =>
-      toast(e?.message || "Password structural mismatch", "error"),
-  });
+  const handleUpdateProfile = (
+    data: Parameters<typeof updateProfileMutation.mutate>[0],
+  ) => {
+    updateProfileMutation.mutate(data, {
+      onSuccess: () => {
+        invalidateProfile();
+        toast("Profile parameters updated", "success");
+      },
+      onError: (e) => toast(getErrorMessage(e, "Update failure"), "error"),
+    });
+  };
 
-  const avatarMutation = useMutation({
-    mutationFn: asyncUpdateAvatar,
-    onSuccess: () => {
-      invalidateProfile();
-      toast("Avatar binary uploaded", "success");
-    },
-    onError: (e: any) =>
-      toast(e?.message || "Upload pipeline interrupted", "error"),
-  });
+  const handleUpdatePassword = (
+    data: Parameters<typeof updatePasswordMutation.mutate>[0],
+  ) => {
+    updatePasswordMutation.mutate(data, {
+      onSuccess: () => toast("Security keys renewed successfully", "success"),
+      onError: (e) =>
+        toast(getErrorMessage(e, "Password structural mismatch"), "error"),
+    });
+  };
+
+  const handleUpdateAvatar = (formData: FormData) => {
+    avatarMutation.mutate(formData, {
+      onSuccess: () => {
+        invalidateProfile();
+        toast("Avatar binary uploaded", "success");
+      },
+      onError: (e) =>
+        toast(getErrorMessage(e, "Upload pipeline interrupted"), "error"),
+    });
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const formData = new FormData();
       formData.append("file", e.target.files[0]);
-      avatarMutation.mutate(formData);
+      handleUpdateAvatar(formData);
     }
   };
 
   // --- Address Table Column Rules ---
-  const addressColumns: ColumnDef<any, any>[] = [
+  const addressColumns: ColumnDef<TAddressRow>[] = [
     {
       header: "Label",
       accessorKey: "label",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <span className="font-bold text-secondary text-sm">
+          <span className="font-bold text-primary text-sm">
             {row.original.label}
           </span>
           {row.original.is_default && (
@@ -149,7 +191,7 @@ const UsersPage = memo(function UsersPage() {
   ];
 
   // --- Global Users Column Rules (Admin Dashboard View) ---
-  const globalUsersColumns: ColumnDef<any, any>[] = [
+  const globalUsersColumns: ColumnDef<TUserRow>[] = [
     {
       header: "User UID",
       accessorKey: "id",
@@ -163,7 +205,7 @@ const UsersPage = memo(function UsersPage() {
       header: "Account Designation",
       accessorKey: "name",
       cell: ({ row }) => (
-        <span className="font-bold text-secondary text-sm">
+        <span className="font-bold text-primary text-sm">
           {row.original.name || "Anonymous User"}
         </span>
       ),
@@ -224,9 +266,15 @@ const UsersPage = memo(function UsersPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-2xl border border-slate-100 flex flex-col items-center text-center space-y-4">
             <div className="relative group w-24 h-24 rounded-full border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
-              {profileData?.data?.avatarUrl ? (
-                <img
-                  src={profileData.data.avatarUrl}
+              {profile?.avatarUrl ||
+              profile?.avatar ||
+              profile?.profileImage ? (
+                <Image
+                  src={
+                    profile.avatarUrl || profile.avatar || profile.profileImage
+                  }
+                  width={96}
+                  height={96}
                   alt="Avatar Profile Vector"
                   className="w-full h-full object-cover"
                 />
@@ -245,10 +293,10 @@ const UsersPage = memo(function UsersPage() {
             </div>
             <div>
               <h3 className="font-bold text-secondary">
-                {profileData?.data?.name}
+                {profile?.name || "Profile User"}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {profileData?.data?.phone || "No Linked Phone Line"}
+                {profile?.phone || "No Linked Phone Line"}
               </p>
             </div>
           </div>
@@ -259,8 +307,8 @@ const UsersPage = memo(function UsersPage() {
                 <User size={18} className="text-primary" /> Profile Elements
               </h2>
               <ProfileForm
-                defaultValues={profileData?.data}
-                onSubmit={(d) => updateProfileMutation.mutate(d)}
+                defaultValues={profile}
+                onSubmit={handleUpdateProfile}
                 isPending={updateProfileMutation.isPending}
               />
             </div>
@@ -270,7 +318,7 @@ const UsersPage = memo(function UsersPage() {
                 Keys
               </h2>
               <PasswordForm
-                onSubmit={(d) => updatePasswordMutation.mutate(d)}
+                onSubmit={handleUpdatePassword}
                 isPending={updatePasswordMutation.isPending}
               />
             </div>
@@ -292,7 +340,7 @@ const UsersPage = memo(function UsersPage() {
             <div className="h-32 bg-slate-50 animate-pulse rounded-2xl" />
           ) : (
             <DataTable
-              data={addressesData?.data || []}
+              data={Array.isArray(addresses) ? addresses : []}
               columns={addressColumns}
             />
           )}
@@ -305,7 +353,7 @@ const UsersPage = memo(function UsersPage() {
             <div className="h-32 bg-slate-50 animate-pulse rounded-2xl" />
           ) : (
             <DataTable
-              data={allUsersData?.data || []}
+              data={Array.isArray(users) ? users : []}
               columns={globalUsersColumns}
             />
           )}
@@ -322,7 +370,7 @@ const UsersPage = memo(function UsersPage() {
         description="Append a new spatial tracking marker onto your identity profile."
       >
         <AddressForm
-          onSubmit={(d) => addAddressMutation.mutate(d)}
+          onSubmit={handleAddAddress}
           isPending={addAddressMutation.isPending}
         />
       </Modal>
@@ -350,10 +398,11 @@ const UsersPage = memo(function UsersPage() {
               Cancel
             </button>
             <button
-              onClick={() => deleteAddressMutation.mutate(deleteAddress.id)}
+              onClick={handleDeleteAddress}
+              disabled={deleteAddressMutation.isPending}
               className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm"
             >
-              Purge
+              {deleteAddressMutation.isPending ? "Purging..." : "Purge"}
             </button>
           </div>
         </div>
@@ -365,9 +414,9 @@ const UsersPage = memo(function UsersPage() {
         onClose={() => setSelectedUserId(null)}
         title="System Metadata Diagnostics"
       >
-        {singleUserData ? (
+        {selectedUser ? (
           <pre className="p-4 bg-slate-900 text-emerald-400 text-xs font-mono rounded-xl overflow-auto max-h-64">
-            {JSON.stringify(singleUserData.data, null, 2)}
+            {JSON.stringify(selectedUser, null, 2)}
           </pre>
         ) : (
           <p className="text-sm text-slate-400 animate-pulse">

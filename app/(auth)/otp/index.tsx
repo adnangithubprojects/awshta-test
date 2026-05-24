@@ -17,7 +17,12 @@ export default function OtpPage() {
 
   const email = localStorage.getItem("email") || "";
   // Using refs instead of document.getElementById for cleaner React code
-  const inputRefs = useRef<any[]>([]);
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
 
   const verifyMutation = useMutation({
     mutationFn: (otpValue: string) =>
@@ -29,8 +34,8 @@ export default function OtpPage() {
       toast("Identity verified!", "success");
       navigate.push("/reset-password");
     },
-    onError: (error: any) => {
-      toast(error?.message || "Invalid OTP. Please try again.", "error");
+    onError: (error) => {
+      toast(getErrorMessage(error, "Invalid OTP. Please try again."), "error");
       setOtp(["", "", "", "", "", ""]); // Clear all 6
       inputRefs.current[0]?.focus();
     },
@@ -40,7 +45,7 @@ export default function OtpPage() {
     mutationFn: () =>
       asyncUsersForgetPassword({
         email: localStorage.getItem("email") || "",
-      } as any),
+      }),
     onSuccess: () => toast("A new code has been sent", "info"),
     onError: () => toast("Failed to resend code", "error"),
   });
@@ -131,7 +136,9 @@ export default function OtpPage() {
           {otp.map((digit, i) => (
             <input
               key={i}
-              ref={(el) => (inputRefs.current[i] = el)}
+              ref={(el) => {
+                inputRefs.current[i] = el;
+              }}
               type="text"
               inputMode="numeric"
               value={digit}

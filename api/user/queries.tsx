@@ -9,9 +9,12 @@ import {
   asyncGetMyProfile,
   asyncGetAllUsers,
   asyncGetUserById,
+  TAddressInput,
+  TPasswordInput,
+  TProfileInput,
 } from "./fetchers";
 
-enum QueryKeys {
+export enum UserQueryKeys {
   USERS = "users",
   ME = "me",
   ADDRESSES = "addresses",
@@ -21,12 +24,12 @@ enum QueryKeys {
 
 export const useAddAddress = () =>
   useMutation({
-    mutationFn: (data: any) => asyncAddAddress(data),
+    mutationFn: (data: TAddressInput) => asyncAddAddress(data),
   });
 
 export const useGetAddresses = () =>
   useQuery({
-    queryKey: [QueryKeys.ADDRESSES],
+    queryKey: [UserQueryKeys.ADDRESSES],
     queryFn: () => asyncGetAddresses(),
   });
 
@@ -39,7 +42,7 @@ export const useDeleteAddress = () =>
 
 export const useUpdatePassword = () =>
   useMutation({
-    mutationFn: (data: any) => asyncUpdatePassword(data),
+    mutationFn: (data: TPasswordInput) => asyncUpdatePassword(data),
   });
 
 export const useUpdateAvatar = () =>
@@ -49,12 +52,12 @@ export const useUpdateAvatar = () =>
 
 export const useUpdateProfile = () =>
   useMutation({
-    mutationFn: (data: any) => asyncUpdateProfile(data),
+    mutationFn: (data: TProfileInput) => asyncUpdateProfile(data),
   });
 
 export const useGetMyProfile = () =>
   useQuery({
-    queryKey: [QueryKeys.ME],
+    queryKey: [UserQueryKeys.ME],
     queryFn: () => asyncGetMyProfile(),
   });
 
@@ -62,13 +65,13 @@ export const useGetMyProfile = () =>
 
 export const useGetAllUsers = () =>
   useQuery({
-    queryKey: [QueryKeys.USERS],
+    queryKey: [UserQueryKeys.USERS],
     queryFn: () => asyncGetAllUsers(),
   });
 
 export const useGetUserById = (id: string) =>
   useQuery({
-    queryKey: [QueryKeys.USERS, id], // Using an array configuration for specific IDs
+    queryKey: [UserQueryKeys.USERS, id], // Using an array configuration for specific IDs
     queryFn: () => asyncGetUserById(id),
     enabled: !!id, // Only runs if id is provided
   });

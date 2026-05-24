@@ -53,7 +53,15 @@ const CategoriesPage = memo(function CategoriesPage() {
 
   // --- Transaction Triggers ---
   const handleCreate = (data: any) => {
-    createMutation.mutate(data, {
+    const { parent_id, ...cleanedData } = data;
+
+    // 2. Re-attach parent_id only if it contains a valid, non-empty value
+    const finalPayload = {
+      ...cleanedData,
+      ...(parent_id && parent_id.trim() !== "" ? { parent_id } : {}),
+    };
+
+    createMutation.mutate(finalPayload, {
       onSuccess: () => {
         refreshCache();
         setCreateOpen(false);
@@ -65,8 +73,15 @@ const CategoriesPage = memo(function CategoriesPage() {
   };
 
   const handleUpdate = (data: any) => {
+    const { parent_id, ...cleanedData } = data;
+
+    const finalPayload = {
+      ...cleanedData,
+      ...(parent_id && parent_id.trim() !== "" ? { parent_id } : {}),
+    };
+
     updateMutation.mutate(
-      { id: editCategory.id, data },
+      { id: editCategory.id, data: finalPayload },
       {
         onSuccess: () => {
           refreshCache();
@@ -127,7 +142,7 @@ const CategoriesPage = memo(function CategoriesPage() {
             )}
           </div>
           <div>
-            <p className="font-bold text-secondary text-sm">
+            <p className="font-bold text-primary text-sm">
               {row.original.name}
             </p>
             <p className="text-[11px] text-slate-400 font-mono">
@@ -178,7 +193,7 @@ const CategoriesPage = memo(function CategoriesPage() {
       {/* Top Action Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-black text-secondary tracking-tight">
+          <h1 className="text-2xl font-black text-primary tracking-tight">
             Taxonomy & Categories Framework
           </h1>
           <p className="text-slate-400 text-sm">
@@ -188,7 +203,7 @@ const CategoriesPage = memo(function CategoriesPage() {
         </div>
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 bg-secondary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary transition-all cursor-pointer"
+          className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all cursor-pointer"
         >
           <Plus size={16} /> Create Category Node
         </button>

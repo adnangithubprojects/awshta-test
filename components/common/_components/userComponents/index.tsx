@@ -1,8 +1,9 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Phone, User, Lock, Upload } from "lucide-react";
+import { MapPin, Phone, User, Lock } from "lucide-react";
 import TextInput from "../textInput";
+import { useEffect } from "react";
 
 // --- Validation Schemas ---
 
@@ -11,9 +12,9 @@ export const addressSchema = z.object({
   street: z.string().min(5, "Street address is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State/Province is required"),
-  country: z.string().min(2, "Country is required").default("Pakistan"),
+  country: z.string().min(2, "Country is required"),
   postal_code: z.string().min(5, "Valid postal code required"),
-  is_default: z.boolean().optional().default(false),
+  is_default: z.boolean(),
 });
 
 export const profileSchema = z.object({
@@ -35,9 +36,9 @@ export const passwordSchema = z
     path: ["new_password"],
   });
 
-type TAddressForm = z.infer<typeof addressSchema>;
-type TProfileForm = z.infer<typeof profileSchema>;
-type TPasswordForm = z.infer<typeof passwordSchema>;
+export type TAddressForm = z.infer<typeof addressSchema>;
+export type TProfileForm = z.infer<typeof profileSchema>;
+export type TPasswordForm = z.infer<typeof passwordSchema>;
 
 // --- Address Form Component ---
 
@@ -73,6 +74,7 @@ export function AddressForm({
           label="Address Label"
           placeholder="Home / Office"
           icon={MapPin}
+          disabled={isPending}
         />
         <TextInput
           name="street"
@@ -80,6 +82,7 @@ export function AddressForm({
           label="Street Address"
           placeholder="123 Main St"
           icon={MapPin}
+          disabled={isPending}
         />
         <TextInput
           name="city"
@@ -87,6 +90,7 @@ export function AddressForm({
           label="City"
           placeholder="Islamabad"
           icon={MapPin}
+          disabled={isPending}
         />
         <TextInput
           name="state"
@@ -94,6 +98,7 @@ export function AddressForm({
           label="State / Province"
           placeholder="Punjab"
           icon={MapPin}
+          disabled={isPending}
         />
         <TextInput
           name="postal_code"
@@ -101,6 +106,7 @@ export function AddressForm({
           label="Postal Code"
           placeholder="44000"
           icon={MapPin}
+          disabled={isPending}
         />
         <TextInput
           name="country"
@@ -108,6 +114,7 @@ export function AddressForm({
           label="Country"
           placeholder="Pakistan"
           icon={MapPin}
+          disabled={isPending}
         />
       </div>
       <Controller
@@ -119,6 +126,7 @@ export function AddressForm({
               type="checkbox"
               checked={field.value}
               onChange={(e) => field.onChange(e.target.checked)}
+              disabled={isPending}
               className="rounded border-slate-300 text-primary focus:ring-primary"
             />
             <span className="text-sm font-semibold text-slate-600">
@@ -149,10 +157,23 @@ export function ProfileForm({
   onSubmit: (data: TProfileForm) => void;
   isPending: boolean;
 }) {
-  const { control, handleSubmit } = useForm<TProfileForm>({
+  const { control, handleSubmit, reset } = useForm<TProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues,
+    defaultValues: {
+      name: "",
+      phone: "",
+      ...defaultValues,
+    },
   });
+
+  useEffect(() => {
+    if (defaultValues) {
+      reset({
+        name: defaultValues.name || "",
+        phone: defaultValues.phone || "",
+      });
+    }
+  }, [defaultValues, reset]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
@@ -162,6 +183,7 @@ export function ProfileForm({
         label="Full Name"
         placeholder="John Doe"
         icon={User}
+        disabled={isPending}
       />
       <TextInput
         name="phone"
@@ -169,6 +191,7 @@ export function ProfileForm({
         label="Phone Number"
         placeholder="+92 300 1234567"
         icon={Phone}
+        disabled={isPending}
       />
       <button
         type="submit"
@@ -211,6 +234,7 @@ export function PasswordForm({
         type="password"
         placeholder="••••••••"
         icon={Lock}
+        disabled={isPending}
       />
       <TextInput
         name="new_password"
@@ -219,6 +243,7 @@ export function PasswordForm({
         type="password"
         placeholder="••••••••"
         icon={Lock}
+        disabled={isPending}
       />
       <button
         type="submit"

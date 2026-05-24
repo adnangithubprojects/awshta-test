@@ -37,10 +37,12 @@ export interface TProductFilters {
 
 export const asyncGetProducts = async (filters: TProductFilters = {}) => {
   try {
-    return await API_URL.get("/api/v1/products", {
+    const response = await API_URL.get("/api/v1/products", {
       params: filters,
       withCredentials: true,
     });
+
+    return response?.data?.items;
   } catch (error: any) {
     throw axiosError(error);
   }

@@ -31,8 +31,11 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: asyncAuthLogin,
     onSuccess: (res) => {
-      console.log("login res", res?.data?.data?.user);
-      setAuth(res?.data?.data?.user);
+      console.log("login res", res);
+      const user = res?.data?.user;
+      const accessToken = res?.data?.access_token;
+      const refreshToken = res?.data?.refresh_token;
+      setAuth(user, accessToken, refreshToken);
       toast("Welcome back!", "success");
       navigate.push("/dashboard");
     },

@@ -8,6 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/common/toast";
 import { asyncResetUserPassword } from "@/api/user/fetchers";
+import TextInput from "@/components/common/_components/textInput";
 
 const resetSchema = z
   .object({
@@ -34,6 +35,11 @@ export default function ResetPasswordPage() {
     resolver: zodResolver(resetSchema),
     defaultValues: { password: "", confirmPassword: "" },
   });
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
 
   const resetMutation = useMutation({
     mutationFn: (data: TResetForm) => asyncResetUserPassword(data.password),
@@ -41,8 +47,8 @@ export default function ResetPasswordPage() {
       toast("Password updated successfully! Please log in.", "success");
       navigate.push("/login");
     },
-    onError: (error: any) => {
-      toast(error?.message || "Failed to reset password", "error");
+    onError: (error) => {
+      toast(getErrorMessage(error, "Failed to reset password"), "error");
     },
   });
 

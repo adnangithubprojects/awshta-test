@@ -8,8 +8,7 @@ import {
   Package,
   Star,
   Eye,
-  SlidersHorizontal,
-  Sliders,
+  ShoppingBag,
 } from "lucide-react";
 // import useDebounce from "@renderer/hooks/useDebounce";
 
@@ -24,11 +23,23 @@ import {
 import { ProductForm } from "@/components/common/_components/productComponents";
 import { RowActions } from "@/components/common/_components/categoryComponents";
 import { useGetCategories } from "@/api/category/queries";
+import { OrderQueryKeys, useCreateOrder } from "@/api/orders/queries";
+import type { TCreateOrderInput } from "@/api/orders/fetchers";
+import { OrderForm } from "@/components/common/_components/ordersComponents";
 import { useToast } from "@/components/common/toast";
 import Pagination from "@/components/common/paginations";
 import { DataTable } from "@/components/common/table";
 import Modal from "@/components/common/modal";
 import useDebounce from "@/hooks/useDebounce";
+import Image from "next/image";
+import { IMAGE_URL } from "@/config/url-config";
+
+type TProductRow = {
+  id: string;
+  title?: string;
+  name?: string;
+  stock?: number;
+};
 
 const ProductsPage = memo(function ProductsPage() {
   const queryClient = useQueryClient();
@@ -47,6 +58,8 @@ const ProductsPage = memo(function ProductsPage() {
 
   // Modal Control Interceptors
   const [createOpen, setCreateOpen] = useState(false);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [orderProduct, setOrderProduct] = useState<TProductRow | null>(null);
   const [editProduct, setEditProduct] = useState<any | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<any | null>(null);
   const [inspectSlug, setInspectSlug] = useState<string | null>(null);
@@ -65,13 +78,17 @@ const ProductsPage = memo(function ProductsPage() {
     featured: isFeaturedFilter,
   };
 
-  const { data, isLoading } = useGetProducts(filtersObj);
+  const { data: productData, isLoading } = useGetProducts(filtersObj);
   const { data: catData } = useGetCategories();
   const { data: slugDetails } = useGetProductBySlug(inspectSlug || "");
 
   const createMutation = useCreateProduct();
+  const createOrderMutation = useCreateOrder();
   const updateMutation = useUpdateProduct();
   const deleteMutation = useDeleteProduct();
+  const productList = Array.isArray(productData)
+    ? productData
+    : productData?.items || productData?.data?.items || productData?.data || [];
 
   const invalidateCacheMatrix = () => {
     queryClient.invalidateQueries({ queryKey: [ProductQueryKeys.PRODUCTS] });
@@ -81,9 +98,54 @@ const ProductsPage = memo(function ProductsPage() {
       });
   };
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
+
   // --- Execution Handlers ---
+  const openOrderModal = (product?: TProductRow) => {
+    setOrderProduct(product || null);
+    setOrderOpen(true);
+  };
+
+  const handleCreateOrder = (payload: TCreateOrderInput) => {
+    createOrderMutation.mutate(payload, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [OrderQueryKeys.ORDERS] });
+        setOrderOpen(false);
+        setOrderProduct(null);
+        toast("Order created successfully", "success");
+      },
+      onError: (e) =>
+        toast(getErrorMessage(e, "Failed to create order"), "error"),
+    });
+  };
+
   const handleCreate = (data: any) => {
-    createMutation.mutate(data, {
+    const formData = new FormData();
+
+    // 2. Loop through your data object keys and append them dynamically
+    Object.keys(data).forEach((key) => {
+      const value = data[key];
+
+      if (key === "images" && Array.isArray(value)) {
+        // Handle the images array loop explicitly
+        value.forEach((imageFile) => {
+          // Append each file to the 'images' key bucket
+          formData.append("images", imageFile);
+        });
+      } else if (typeof value === "boolean") {
+        // Explicitly convert true/false values to strings so form data preserves them
+        formData.append(key, value ? "true" : "false");
+      } else if (value !== null && value !== undefined) {
+        // For titles, prices, stock, etc.
+        formData.append(key, value.toString());
+      }
+    });
+
+    createMutation.mutate(formData, {
       onSuccess: () => {
         invalidateCacheMatrix();
         setCreateOpen(false);
@@ -126,16 +188,31 @@ const ProductsPage = memo(function ProductsPage() {
       header: "Product Inventory Unit",
       accessorKey: "title",
       cell: ({ row }) => {
-        const primaryImg =
-          row.original.images?.find((img: any) => img.is_primary)?.image_path ||
-          row.original.images?.[0]?.image_path;
+        // const primaryImg =
+        //   row.original.images?.find((img: any) => img.is_primary)?.image_path ||
+        //   row.original.images?.[0]?.image_path;
+        const images = row.original.images;
+
+        const foundImageObj =
+          Array.isArray(images) && images.length > 0
+            ? images.find((img: any) => img.is_primary) || images
+            : null;
+
+        // 3. Prepend the base URL to the image path if found
+        const primaryImgUrl = foundImageObj?.image_path
+          ? `${IMAGE_URL}${foundImageObj.image_path}`
+          : null;
+        console.log(primaryImgUrl, "foundImageObj");
+
         return (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
-              {primaryImg ? (
-                <img
-                  src={primaryImg}
-                  alt="Entity mapping layout"
+              {primaryImgUrl ? (
+                <Image
+                  src={primaryImgUrl}
+                  width={40}
+                  height={40}
+                  alt={row?.original?.title || "Product fallback image layout"}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -144,10 +221,10 @@ const ProductsPage = memo(function ProductsPage() {
             </div>
             <div>
               <p className="font-bold text-primary text-sm">
-                {row.original.title}
+                {row?.original?.title}
               </p>
               <button
-                onClick={() => setInspectSlug(row.original.slug)}
+                onClick={() => setInspectSlug(row?.original?.slug)}
                 className="text-[11px] text-primary flex items-center gap-1 font-bold hover:underline cursor-pointer mt-0.5"
               >
                 <Eye size={10} /> Inspect slug path
@@ -162,7 +239,7 @@ const ProductsPage = memo(function ProductsPage() {
       accessorKey: "price",
       cell: ({ row }) => (
         <div>
-          <p className="text-sm font-bold text-secondary">
+          <p className="text-sm font-bold text-primary">
             PKR {Number(row.original.price).toLocaleString("en-PK")}
           </p>
           {row.original.sale_price && (
@@ -221,12 +298,21 @@ const ProductsPage = memo(function ProductsPage() {
     {
       id: "actions",
       cell: ({ row }) => (
-        <RowActions
-          category={row.original}
-          onEdit={setEditProduct}
-          onUpdateImage={() => {}}
-          onDelete={setDeleteProduct}
-        />
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => openOrderModal(row.original)}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors cursor-pointer"
+            title="Create order"
+          >
+            <ShoppingBag size={16} />
+          </button>
+          <RowActions
+            category={row.original}
+            onEdit={setEditProduct}
+            onUpdateImage={() => {}}
+            onDelete={setDeleteProduct}
+          />
+        </div>
       ),
     },
   ];
@@ -244,12 +330,20 @@ const ProductsPage = memo(function ProductsPage() {
             valuation indices.
           </p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all cursor-pointer"
-        >
-          <Plus size={16} /> Add Product Entity
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => openOrderModal()}
+            className="flex items-center gap-2 border border-slate-200 bg-white text-secondary px-5 py-3 rounded-2xl font-bold text-sm hover:border-primary/30 hover:text-primary transition-all cursor-pointer"
+          >
+            <ShoppingBag size={16} /> Create Order
+          </button>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all cursor-pointer"
+          >
+            <Plus size={16} /> Add Product Entity
+          </button>
+        </div>
       </div>
 
       {/* Advanced Filter Management Bar */}
@@ -305,14 +399,17 @@ const ProductsPage = memo(function ProductsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <DataTable data={data?.items || []} columns={columns} />
-          {data?.pages > 1 && (
+          <DataTable data={productList || []} columns={columns} />
+          {productData?.pages > 1 && (
             <Pagination
               meta={{
-                totalItems: data.total,
-                currentPage: data.page,
-                totalPages: data.pages,
-                perPage: data.per_page,
+                totalItems: productData.total,
+                itemCount: productList.length,
+                currentPage: productData.page,
+                totalPages: productData.pages,
+                itemsPerPage: productData.per_page,
+                hasNextPage: productData.page < productData.pages,
+                hasPreviousPage: productData.page > 1,
               }}
               onPageChange={setPage}
             />
@@ -321,6 +418,24 @@ const ProductsPage = memo(function ProductsPage() {
       )}
 
       {/* --- Overlay Modals Portal Matrix --- */}
+
+      {/* Create Order Modal */}
+      <Modal
+        isOpen={orderOpen}
+        onClose={() => {
+          setOrderOpen(false);
+          setOrderProduct(null);
+        }}
+        title="Create Order"
+        size="lg"
+      >
+        <OrderForm
+          products={productList}
+          defaultProductId={orderProduct?.id}
+          onSubmit={handleCreateOrder}
+          isPending={createOrderMutation.isPending}
+        />
+      </Modal>
 
       {/* Create Modal */}
       <Modal

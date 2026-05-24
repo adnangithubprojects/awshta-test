@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Eye,
+  Plus,
   ShoppingBag,
   CreditCard,
   MapPin,
@@ -14,12 +15,16 @@ import {
 import {
   useGetOrders,
   useGetOrderDetails,
+  useCreateOrder,
   useUpdateOrderStatus,
   OrderQueryKeys,
 } from "@/api/orders/queries";
+import type { TCreateOrderInput } from "@/api/orders/fetchers";
+import { useGetProducts } from "@/api/products/queries";
 
 import { useToast } from "@/components/common/toast";
 import {
+  OrderForm,
   OrderTimeline,
   StatusBadge,
 } from "@/components/common/_components/ordersComponents";
@@ -35,16 +40,23 @@ const OrdersPage = memo(function OrdersPage() {
   const [page, setPage] = useState(1);
 
   // Overlay Modal Interceptors
+  const [createOpen, setCreateOpen] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [inspectOrderId, setInspectOrderId] = useState<string | null>(null);
 
   // --- Dynamic Sub-Streams ---
   const { data, isLoading } = useGetOrders({ page, per_page: 10 });
+  const { data: productData } = useGetProducts({ page: 1, per_page: 100 });
   const { data: detailsData, isLoading: detailsLoading } = useGetOrderDetails(
     inspectOrderId || "",
   );
 
+  const createMutation = useCreateOrder();
   const statusMutation = useUpdateOrderStatus();
+  const orderData = data?.data || data;
+  const productOptions = Array.isArray(productData)
+    ? productData
+    : productData?.items || productData?.data?.items || productData?.data || [];
 
   const refreshCacheGrid = () => {
     queryClient.invalidateQueries({ queryKey: [OrderQueryKeys.ORDERS] });
@@ -54,7 +66,25 @@ const OrdersPage = memo(function OrdersPage() {
       });
   };
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
+
   // --- Processing Transactions Pipelines ---
+  const handleCreate = (payload: TCreateOrderInput) => {
+    createMutation.mutate(payload, {
+      onSuccess: () => {
+        refreshCacheGrid();
+        setCreateOpen(false);
+        toast("Order created successfully", "success");
+      },
+      onError: (e) =>
+        toast(getErrorMessage(e, "Failed to create order"), "error"),
+    });
+  };
+
   const handleStatusChange = (orderId: string, nextStatus: string) => {
     statusMutation.mutate(
       { id: orderId, status: nextStatus },
@@ -77,11 +107,11 @@ const OrdersPage = memo(function OrdersPage() {
       accessorKey: "order_number",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center text-secondary shrink-0">
+          <div className="w-9 h-9 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center text-primary shrink-0">
             <ShoppingBag size={15} />
           </div>
           <div>
-            <p className="font-black text-secondary text-sm tracking-tight">
+            <p className="font-black text-primary text-sm tracking-tight">
               {row.original.order_number ||
                 `ORD-#${row.original.id.slice(0, 8)}`}
             </p>
@@ -96,7 +126,7 @@ const OrdersPage = memo(function OrdersPage() {
       header: "Settlement Gross",
       accessorKey: "total",
       cell: ({ row }) => (
-        <span className="font-extrabold text-secondary text-sm">
+        <span className="font-extrabold text-primary text-sm">
           PKR {Number(row.original.total).toLocaleString("en-PK")}
         </span>
       ),
@@ -140,7 +170,7 @@ const OrdersPage = memo(function OrdersPage() {
           </button>
           <button
             onClick={() => setActiveOrderId(row.original.id)}
-            className="px-3 py-1.5 border border-slate-200 hover:border-secondary text-secondary font-bold text-xs rounded-xl transition-all cursor-pointer"
+            className="px-3 py-1.5 border border-slate-200 hover:border-secondary text-primary font-bold text-xs rounded-xl transition-all cursor-pointer"
           >
             Route Pipeline
           </button>
@@ -155,14 +185,22 @@ const OrdersPage = memo(function OrdersPage() {
   return (
     <div className="space-y-6">
       {/* Module Title Header Layout */}
-      <div>
-        <h1 className="text-2xl font-black text-primary tracking-tight">
-          Fulfillment Order Console
-        </h1>
-        <p className="text-slate-400 text-sm">
-          Track real-time checkouts, route freight states, and review ledger
-          updates.
-        </p>
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-primary tracking-tight">
+            Fulfillment Order Console
+          </h1>
+          <p className="text-slate-400 text-sm">
+            Track real-time checkouts, route freight states, and review ledger
+            updates.
+          </p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-primary/90 transition-all cursor-pointer"
+        >
+          <Plus size={16} /> Create Order
+        </button>
       </div>
 
       {/* Primary Ledgers Grid Matrix */}
@@ -177,14 +215,17 @@ const OrdersPage = memo(function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <DataTable data={data?.items || []} columns={columns} />
-          {data?.pages > 1 && (
+          <DataTable data={orderData?.items || []} columns={columns} />
+          {orderData?.pages > 1 && (
             <Pagination
               meta={{
-                totalItems: data.total,
-                currentPage: data.page,
-                totalPages: data.pages,
-                perPage: data.per_page,
+                totalItems: orderData.total,
+                itemCount: orderData.items?.length || 0,
+                currentPage: orderData.page,
+                totalPages: orderData.pages,
+                itemsPerPage: orderData.per_page,
+                hasNextPage: orderData.page < orderData.pages,
+                hasPreviousPage: orderData.page > 1,
               }}
               onPageChange={setPage}
             />
@@ -193,6 +234,20 @@ const OrdersPage = memo(function OrdersPage() {
       )}
 
       {/* --- Overlay Modals Portal Stack --- */}
+
+      {/* Create Order Modal */}
+      <Modal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Create Fulfillment Order"
+        size="lg"
+      >
+        <OrderForm
+          products={productOptions}
+          onSubmit={handleCreate}
+          isPending={createMutation.isPending}
+        />
+      </Modal>
 
       {/* Pipeline Router Selection Modal */}
       <Modal
@@ -282,7 +337,7 @@ const OrdersPage = memo(function OrdersPage() {
 
               {/* Internal Memos */}
               <div className="bg-slate-50/60 border border-slate-100 p-4 rounded-2xl space-y-2.5">
-                <h3 className="text-xs font-black text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-black text-primary uppercase tracking-wider flex items-center gap-1.5">
                   <Notebook size={13} className="text-primary" /> Delivery Memos
                   & Instructions
                 </h3>
@@ -295,7 +350,7 @@ const OrdersPage = memo(function OrdersPage() {
 
             {/* Structured Line Items Collection List */}
             <div className="space-y-3">
-              <h3 className="text-xs font-black text-secondary uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-black text-primary uppercase tracking-wider flex items-center gap-1.5">
                 <Layers size={13} className="text-primary" /> Order Content
                 Manifest Lines
               </h3>

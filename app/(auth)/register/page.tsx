@@ -9,7 +9,6 @@ import {
   User,
   ArrowRight,
   ShieldCheck,
-  Camera,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -63,16 +62,22 @@ const RegisterCompany = memo(function RegisterCompany() {
       profileImage: null,
     },
   });
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    return fallback;
+  };
 
   const registerUserMutation = useMutation({
     mutationFn: asyncRegisterUser,
     onSuccess: (res) => {
-      setAuth(res?.data?.data?.user);
+      const payload = res?.data?.data || res?.data;
+      setAuth(payload?.user, payload?.access_token, payload?.refresh_token);
       toast("Registration successful! ", "success");
       navigate.push("/dashboard");
     },
-    onError: (error: any) => {
-      toast(error || "Registration failed. Please try again.", "error");
+    onError: (error) => {
+      toast(getErrorMessage(error, "Registration failed. Please try again."), "error");
     },
   });
 
