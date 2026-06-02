@@ -35,7 +35,7 @@ export default function Modal({
       onClick={onClose}
     >
       <div
-        className={`w-full ${widths[size]} bg-white rounded-[2rem] border border-slate-100 shadow-2xl overflow-hidden animate-[toastIn_0.2s_ease]`}
+        className={`w-full ${widths[size]} bg-white rounded-4xl border border-slate-100 shadow-2xl overflow-hidden animate-[toastIn_0.2s_ease]`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between px-8 pt-7 pb-5 border-b border-slate-50">
@@ -54,7 +54,9 @@ export default function Modal({
             <X size={16} />
           </button>
         </div>
-        <div className="px-8 py-6">{children}</div>
+        <div className="px-8 py-6 overflow-y-auto max-h-[calc(85vh-100px)] flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );

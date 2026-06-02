@@ -2,14 +2,7 @@
 import { memo, useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  Plus,
-  Search,
-  Package,
-  Star,
-  Eye,
-  ShoppingBag,
-} from "lucide-react";
+import { Plus, Search, Package, Star, Eye, ShoppingBag } from "lucide-react";
 // import useDebounce from "@renderer/hooks/useDebounce";
 
 import {
@@ -20,8 +13,10 @@ import {
   useDeleteProduct,
   ProductQueryKeys,
 } from "@/api/products/queries";
-import { ProductForm } from "@/components/common/_components/productComponents";
-import { RowActions } from "@/components/common/_components/categoryComponents";
+import {
+  ProductForm,
+  RowActions,
+} from "@/components/common/_components/productComponents";
 import { useGetCategories } from "@/api/category/queries";
 import { OrderQueryKeys, useCreateOrder } from "@/api/orders/queries";
 import type { TCreateOrderInput } from "@/api/orders/fetchers";
@@ -33,6 +28,8 @@ import Modal from "@/components/common/modal";
 import useDebounce from "@/hooks/useDebounce";
 import Image from "next/image";
 import { IMAGE_URL } from "@/config/url-config";
+import { ReviewQueryKeys, useCreateReview } from "@/api/review/queries";
+import { ReviewForm } from "@/components/common/_components/reviewComponents";
 
 type TProductRow = {
   id: string;
@@ -63,6 +60,10 @@ const ProductsPage = memo(function ProductsPage() {
   const [editProduct, setEditProduct] = useState<any | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<any | null>(null);
   const [inspectSlug, setInspectSlug] = useState<string | null>(null);
+
+  const [reviewTargetProduct, setReviewTargetProduct] = useState<any | null>(
+    null,
+  );
 
   // Reset page counter whenever filters mutate
   useEffect(() => {
@@ -179,6 +180,26 @@ const ProductsPage = memo(function ProductsPage() {
         toast("Product dropped from inventory catalog", "info");
       },
       onError: (e: any) => toast(e?.message || "Failed to clean item", "error"),
+    });
+  };
+
+  const createReviewMutation = useCreateReview();
+
+  const invalidateCache = () =>
+    queryClient.invalidateQueries({
+      queryKey: [ReviewQueryKeys.REVIEWS, productId],
+    });
+
+  // --- Transactions Pipeline ---
+  const handleCreateReview = (data: any) => {
+    createReviewMutation.mutate(data, {
+      onSuccess: () => {
+        invalidateCache();
+        setReviewTargetProduct(null);
+        toast("Review processed successfully", "success");
+      },
+      onError: (e: any) =>
+        toast(e?.message || "Error logging response context", "error"),
     });
   };
 
@@ -307,10 +328,11 @@ const ProductsPage = memo(function ProductsPage() {
             <ShoppingBag size={16} />
           </button>
           <RowActions
-            category={row.original}
+            product={row.original}
             onEdit={setEditProduct}
             onUpdateImage={() => {}}
             onDelete={setDeleteProduct}
+            onAddReview={(p) => setReviewTargetProduct(p)}
           />
         </div>
       ),
@@ -517,6 +539,20 @@ const ProductsPage = memo(function ProductsPage() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!reviewTargetProduct}
+        onClose={() => setReviewTargetProduct(null)}
+        title={`Compose Review: ${reviewTargetProduct?.title || ""}`}
+      >
+        {reviewTargetProduct && (
+          <ReviewForm
+            productId={reviewTargetProduct.id}
+            onSubmit={handleCreateReview}
+            isPending={createReviewMutation.isPending}
+          />
+        )}
       </Modal>
     </div>
   );

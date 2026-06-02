@@ -92,13 +92,13 @@ export function ReviewForm({
       />
 
       <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
           <MessageSquare size={13} /> Detailed Feedback Context
         </label>
         <textarea
           {...register("comment")}
           rows={3}
-          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-secondary outline-none focus:border-primary/40 focus:bg-white transition-all resize-none"
+          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-primary outline-none focus:border-primary/40 focus:bg-white transition-all resize-none"
           placeholder="Describe your user experience with this asset item..."
         />
       </div>

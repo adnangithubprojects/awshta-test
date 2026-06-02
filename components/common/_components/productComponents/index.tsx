@@ -8,6 +8,7 @@ import {
   DollarSign,
   Archive,
   Star,
+  Image as ImageIcon,
   Pencil,
   MoreHorizontal,
   Trash2,
@@ -15,6 +16,7 @@ import {
 import TextInput from "../textInput";
 import SelectInput from "../selectInput";
 import { useState } from "react";
+import Image from "next/image";
 
 export const productSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -204,15 +206,17 @@ export function ProductForm({
 }
 
 export function RowActions({
-  category,
+  product,
   onEdit,
   onUpdateImage,
   onDelete,
+  onAddReview,
 }: {
-  category: any;
+  product: any;
   onEdit: (cat: any) => void;
   onUpdateImage: (cat: any) => void;
   onDelete: (cat: any) => void;
+  onAddReview: (product: any) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -231,31 +235,42 @@ export function RowActions({
           <div className="absolute right-0 top-9 z-20 bg-white rounded-2xl border border-slate-100 shadow-xl py-1.5 w-48 overflow-hidden">
             <button
               onClick={() => {
-                onEdit(category);
+                onAddReview(product);
                 setOpen(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              <Pencil size={14} className="text-primary" /> Edit Structural Data
+              <Star size={14} className="text-amber-500 fill-amber-500" /> Add
+              Review
             </button>
             <button
               onClick={() => {
-                onUpdateImage(category);
+                onEdit(product);
                 setOpen(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             >
-              {/* <Image size={14} className="text-amber-500" /> Replace Image File */}
+              <Pencil size={14} className="text-primary" /> Edit Product
+            </button>
+            <button
+              onClick={() => {
+                onUpdateImage(product);
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <ImageIcon size={14} className="text-amber-500" />
+              Replace Image
             </button>
             <div className="border-t border-slate-50 my-1" />
             <button
               onClick={() => {
-                onDelete(category);
+                onDelete(product);
                 setOpen(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
             >
-              <Trash2 size={14} /> Delete Category
+              <Trash2 size={14} /> Delete Product
             </button>
           </div>
         </>

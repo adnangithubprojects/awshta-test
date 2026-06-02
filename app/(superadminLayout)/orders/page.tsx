@@ -262,20 +262,26 @@ const OrdersPage = memo(function OrdersPage() {
             tracking instance:
           </p>
           <div className="grid grid-cols-1 gap-2">
-            {["pending", "processing", "shipped", "delivered", "cancelled"].map(
-              (st) => (
-                <button
-                  key={st}
-                  disabled={statusMutation.isPending}
-                  onClick={() =>
-                    activeOrderId && handleStatusChange(activeOrderId, st)
-                  }
-                  className="w-full text-left px-4 py-3 border border-slate-100 hover:border-primary/30 hover:bg-slate-50 rounded-xl font-bold text-xs text-secondary capitalize transition-all cursor-pointer disabled:opacity-50"
-                >
-                  Set Stage to: <span className="text-primary">{st}</span>
-                </button>
-              ),
-            )}
+            {[
+              "pending",
+              "confirmed",
+              "processing",
+              "shipped",
+              "delivered",
+              "cancelled",
+              "refunded",
+            ].map((st) => (
+              <button
+                key={st}
+                disabled={statusMutation.isPending}
+                onClick={() =>
+                  activeOrderId && handleStatusChange(activeOrderId, st)
+                }
+                className="w-full text-left px-4 py-3 border border-slate-100 hover:border-primary/30 hover:bg-slate-50 rounded-xl font-bold text-xs text-primary capitalize transition-all cursor-pointer disabled:opacity-50"
+              >
+                Set Stage to: <span className="text-accent">{st}</span>
+              </button>
+            ))}
           </div>
         </div>
       </Modal>
@@ -304,13 +310,13 @@ const OrdersPage = memo(function OrdersPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Shipping Blocks */}
               <div className="bg-slate-50/60 border border-slate-100 p-4 rounded-2xl space-y-2.5">
-                <h3 className="text-xs font-black text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-black text-primary uppercase tracking-wider flex items-center gap-1.5">
                   <MapPin size={13} className="text-primary" /> Logistics
                   Consignee Destination
                 </h3>
                 {targetDetails.shipping_address ? (
                   <div className="text-xs text-slate-600 space-y-1">
-                    <p className="font-bold text-secondary uppercase text-[10px] bg-slate-200/60 inline-block px-1.5 py-0.5 rounded">
+                    <p className="font-bold text-primary uppercase text-[10px] bg-slate-200/60 inline-block px-1.5 py-0.5 rounded">
                       Label: {targetDetails.shipping_address.label || "Home"}
                     </p>
                     <p className="mt-1">
@@ -324,7 +330,7 @@ const OrdersPage = memo(function OrdersPage() {
                       {targetDetails.shipping_address.country} (
                       {targetDetails.shipping_address.postal_code})
                     </p>
-                    <p className="font-bold text-secondary pt-1">
+                    <p className="font-bold text-primary pt-1">
                       Tel: {targetDetails.shipping_address.phone}
                     </p>
                   </div>

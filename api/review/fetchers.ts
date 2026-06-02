@@ -21,10 +21,12 @@ export const asyncGetProductReviews = async (
   filters: TReviewFilters = {},
 ) => {
   try {
-    return await API_URL.get(`/api/v1/reviews/product/${productId}`, {
+    const response = await API_URL.get(`/api/v1/reviews/product/${productId}`, {
       params: filters,
       withCredentials: true,
     });
+
+    return response?.data?.items;
   } catch (error: any) {
     throw axiosError(error);
   }

@@ -312,12 +312,12 @@ export function OrderTimeline({ currentStatus }: { currentStatus: string }) {
         <div key={stage} className="flex items-center flex-1 last:flex-none">
           <div className="flex flex-col items-center relative">
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white transition-all z-10 ${i <= currentIdx ? "border-secondary shadow-sm" : "border-slate-100"}`}
+              className={`w-7 h-7 rounded-full flex items-center justify-center border-2 bg-white transition-all z-10 ${i <= currentIdx ? "border-primary shadow-sm" : "border-slate-100"}`}
             >
               {getIcon(i)}
             </div>
             <span
-              className={`text-[10px] font-bold uppercase mt-1.5 absolute -bottom-5 whitespace-nowrap tracking-tight ${i <= currentIdx ? "text-secondary" : "text-slate-400"}`}
+              className={`text-[10px] font-bold uppercase mt-1.5 absolute -bottom-5 whitespace-nowrap tracking-tight ${i <= currentIdx ? "text-primary" : "text-slate-400"}`}
             >
               {stage}
             </span>
