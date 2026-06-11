@@ -42,7 +42,7 @@ export const asyncGetProducts = async (filters: TProductFilters = {}) => {
       withCredentials: true,
     });
 
-    return response?.data?.items;
+    return response?.data;
   } catch (error: any) {
     throw axiosError(error);
   }
@@ -50,9 +50,7 @@ export const asyncGetProducts = async (filters: TProductFilters = {}) => {
 
 export const asyncCreateProduct = async (data: any) => {
   try {
-    return await API_URL.post("/api/v1/products", data, {
-      withCredentials: true,
-    });
+    return await API_FORM_URL.post("/api/v1/products", data);
   } catch (error: any) {
     throw axiosError(error);
   }
@@ -70,9 +68,7 @@ export const asyncGetProductBySlug = async (slug: string) => {
 
 export const asyncUpdateProduct = async (productId: string, data: any) => {
   try {
-    return await API_URL.patch(`/api/v1/products/${productId}`, data, {
-      withCredentials: true,
-    });
+    return await API_FORM_URL.patch(`/api/v1/products/${productId}`, data);
   } catch (error: any) {
     throw axiosError(error);
   }

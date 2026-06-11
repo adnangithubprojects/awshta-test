@@ -1,45 +1,45 @@
-import { TUser } from "@/types";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
-type TAuthStore = {
-  user: TPublicUser | null;
-  token: string | null;
-  refreshToken: string | null;
-  isAuthenticated: boolean;
-  setAuth: (user: TPublicUser, token: string, refreshToken: string) => void;
-  clearAuth: () => void;
+type TAuthData = {
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: string;
 };
 
-type TPublicUser = Omit<TUser, "password" | "otp">;
+type TAuthState = {
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: string;
 
-export const useAuthStore = create<TAuthStore>()(
+  setAuth: (payload: TAuthData) => void;
+  logout: () => void;
+};
+
+export const useAuthStore = create<TAuthState>()(
   persist(
     (set) => ({
-      user: null,
-      token: null,
-      refreshToken: null,
-      isAuthenticated: false,
+      access_token: undefined,
+      refresh_token: undefined,
+      token_type: undefined,
 
-      setAuth: (user, token, refreshToken) =>
-        set({
-          user,
-          token,
-          refreshToken,
-          isAuthenticated: true,
-        }),
-      // setAuth: (user) => set({ user, isAuthenticated: true }),
+      setAuth: (payload) =>
+        set(() => ({
+          access_token: payload.access_token,
+          refresh_token: payload.refresh_token,
+          token_type: payload.token_type,
+        })),
 
-      clearAuth: () =>
+      logout: () =>
         set({
-          user: null,
-          token: null,
-          refreshToken: null,
-          isAuthenticated: false,
+          access_token: undefined,
+          refresh_token: undefined,
+          token_type: undefined,
         }),
     }),
     {
       name: "auth-storage",
+      storage: createJSONStorage(() => localStorage),
     },
   ),
 );

@@ -1,56 +1,57 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuthStore } from "@/stores/useAuthstore";
-import axios from "axios";
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+export const IMAGE_URL = "https://api.awshta.com";
 
 export const BASE_URL = "https://awshta.devsment.com";
-export const IMAGE_URL = "https://awshta.com/";
-// export const BASE_URL = 'http://localhost:8080'
 
-export const API_URL = axios.create({
+export const API_URL: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
-    Accept: "application/json",
   },
 });
 
-export const API_FORM_URL = axios.create({
+export const API_FORM_URL: AxiosInstance = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true,
   headers: {
-    "content-type": "multipart/form-data",
+    "Content-Type": "multipart/form-data",
   },
 });
 
-API_URL.interceptors.request.use(
-  (config) => {
-    if (config.data instanceof FormData) {
-      if (config.headers) {
-        delete config.headers["Content-Type"];
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
-
-const attachToken = async (config: any) => {
-  // Pull the current token instantly from the active Zustand state
-  const token = useAuthStore.getState().token;
-
-  // Optional dynamic check if you uncomment later:
-  // if (token && isTokenExpired(token)) {
-  //   ...
-  // }
-
-  if (token) {
+// --- Request Interceptor ---
+const attachToken = (config: InternalAxiosRequestConfig) => {
+  const token = useAuthStore.getState().access_token;
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 };
 
-API_URL.interceptors.request.use(attachToken, Promise.reject);
-API_FORM_URL.interceptors.request.use(attachToken, Promise.reject);
+const handleResponseError = (error: any) => {
+  const status = error.response?.status;
+  const detail = error.response?.data?.detail;
+
+  if (status === 401 || detail === "Invalid or expired access token") {
+    const pathname = window.location.pathname;
+
+    useAuthStore.getState().logout?.();
+
+    if (pathname !== "/login") {
+      history.pushState({}, "", "/login");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  }
+
+  return Promise.reject(error);
+};
+
+API_URL.interceptors.request.use(attachToken, (err) => Promise.reject(err));
+API_FORM_URL.interceptors.request.use(attachToken, (err) =>
+  Promise.reject(err),
+);
+
+API_URL.interceptors.response.use((res) => res, handleResponseError);
+API_FORM_URL.interceptors.response.use((res) => res, handleResponseError);
+
+export default API_URL;

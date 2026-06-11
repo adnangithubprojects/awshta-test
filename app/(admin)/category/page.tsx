@@ -21,6 +21,8 @@ import {
 } from "@/components/common/_components/categoryComponents";
 import { DataTable } from "@/components/common/table";
 import Modal from "@/components/common/modal";
+import { BASE_URL } from "@/config/url-config";
+import Image from "next/image";
 
 const CategoriesPage = memo(function CategoriesPage() {
   const queryClient = useQueryClient();
@@ -132,10 +134,13 @@ const CategoriesPage = memo(function CategoriesPage() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
             {row.original.image ? (
-              <img
-                src={row.original.image}
+              <Image
+                src={`${BASE_URL}/uploads/${row.original.image}`}
                 alt="Icon layout vector"
                 className="w-full h-full object-cover"
+                width={40}
+                height={40}
+                priority
               />
             ) : (
               <Folder size={16} className="text-primary" />

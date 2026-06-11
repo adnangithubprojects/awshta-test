@@ -7,9 +7,11 @@ import { Mail, Lock, LogIn, ArrowRight } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/useAuthstore";
 import { useToast } from "@/components/common/toast";
-import { asyncAuthLogin, asyncLoginUsers } from "@/api/user/fetchers";
-import { useRouter } from "next/navigation";
+import { asyncAuthLogin } from "@/api/user/fetchers";
+import { useRouter, useSearchParams } from "next/navigation";
 import TextInput from "@/components/common/_components/textInput";
+import { useEffect } from "react";
+import { useGetMyProfile } from "@/api/user/queries"; // Integrated profile query hook
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -19,9 +21,15 @@ const loginSchema = z.object({
 type TLoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { setAuth } = useAuthStore();
+  const { setAuth, access_token } = useAuthStore();
   const navigate = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  // 1. Fetch profile automatically only when access_token becomes available
+  const { data: user, isLoading: isProfileLoading } = useGetMyProfile({
+    enabled: !!access_token,
+  });
 
   const { control, handleSubmit } = useForm<TLoginForm>({
     resolver: zodResolver(loginSchema),
@@ -31,15 +39,10 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: asyncAuthLogin,
     onSuccess: (res) => {
-      console.log("login res", res);
-      const user = res?.data?.user;
-      const accessToken = res?.data?.access_token;
-      const refreshToken = res?.data?.refresh_token;
-      setAuth(user, accessToken, refreshToken);
-      toast("Welcome back!", "success");
-      navigate.push("/dashboard");
+      // Triggers access_token updates which wakes up useGetMyProfile
+      setAuth(res.data);
     },
-    onError: (error: any) => {
+    onError: (error: string) => {
       toast(error || "Login failed. Please try again.", "error");
     },
   });
@@ -47,6 +50,40 @@ export default function LoginPage() {
   const onSubmit = (data: TLoginForm) => {
     loginMutation.mutate(data);
   };
+
+  // 2. Centralized router logic watching for incoming tokens or active user states
+  useEffect(() => {
+    const tokenFromUrl = searchParams.get("token");
+    if (tokenFromUrl) {
+      setAuth({ access_token: tokenFromUrl });
+      // return;
+    }
+
+    if (access_token && !isProfileLoading && user) {
+      toast("Welcome back!", "success");
+      // Conditional Routing Strategy
+      if (user.role === "seller") {
+        navigate.replace("/seller");
+      } else if (user.role === "admin") {
+        navigate.replace("/dashboard");
+      } else {
+        // Fallback or generic role fallback route
+        navigate.replace("/dashboard");
+      }
+    }
+  }, [
+    access_token,
+    user,
+    isProfileLoading,
+    navigate,
+    searchParams,
+    setAuth,
+    toast,
+  ]);
+
+  // Combined permission verification flag
+  const isAuthenticating =
+    loginMutation.isPending || (access_token && isProfileLoading);
 
   return (
     <div className="h-screen w-screen bg-[#F8FAFC] flex items-center justify-center p-6 select-none">
@@ -70,6 +107,7 @@ export default function LoginPage() {
             label="Email Address"
             placeholder="admin@awshta.com"
             icon={Mail}
+            disabled={isAuthenticating}
           />
 
           <div>
@@ -80,11 +118,13 @@ export default function LoginPage() {
               type="password"
               placeholder="••••••••"
               icon={Lock}
+              disabled={isAuthenticating}
             />
             <button
               type="button"
+              disabled={isAuthenticating}
               onClick={() => navigate.push("/forgot-password")}
-              className="text-[11px] font-bold text-primary hover:underline mt-2 block ml-auto"
+              className="text-[11px] font-bold text-primary hover:underline mt-2 block ml-auto disabled:opacity-40"
             >
               Forgot Password?
             </button>
@@ -92,24 +132,17 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loginMutation.isPending}
-            className="w-full bg-primary hover:bg-primary/80 text-white py-4 rounded-2xl font-bold  transition-all flex items-center justify-center gap-3 mt-4 active:scale-95 shadow-xl shadow-secondary/10 disabled:opacity-50 cursor-pointer"
+            disabled={isAuthenticating!}
+            className="w-full bg-primary hover:bg-primary/80 text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 mt-4 active:scale-95 shadow-xl shadow-secondary/10 disabled:opacity-50 cursor-pointer"
           >
-            {loginMutation.isPending ? "Signing in..." : "Sign In to awshta"}
-            {!loginMutation.isPending && <ArrowRight size={18} />}
+            {loginMutation.isPending
+              ? "Signing in..."
+              : access_token && isProfileLoading
+                ? "Verifying Workspace Permissions..."
+                : "Sign In to awshta"}
+            {!isAuthenticating && <ArrowRight size={18} />}
           </button>
         </form>
-
-        {/* <p className="text-center text-xs text-slate-400 mt-8">
-          New to the platform?{" "}
-          <button
-            type="button"
-            onClick={() => navigate.push("/register")}
-            className="text-primary font-bold cursor-pointer hover:text-primary/80 transition-colors"
-          >
-            Create an account
-          </button>
-        </p> */}
       </div>
     </div>
   );
