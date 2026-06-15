@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/pages/**/*": {
+      "includeFiles": ".next/server/**"
+    }
+  }
+}

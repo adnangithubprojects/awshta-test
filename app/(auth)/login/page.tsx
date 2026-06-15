@@ -10,7 +10,7 @@ import { useToast } from "@/components/common/toast";
 import { asyncAuthLogin } from "@/api/user/fetchers";
 import { useRouter, useSearchParams } from "next/navigation";
 import TextInput from "@/components/common/_components/textInput";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useGetMyProfile } from "@/api/user/queries"; // Integrated profile query hook
 
 const loginSchema = z.object({
@@ -20,7 +20,7 @@ const loginSchema = z.object({
 
 type TLoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPage() {
   const { setAuth, access_token } = useAuthStore();
   const navigate = useRouter();
   const searchParams = useSearchParams();
@@ -145,5 +145,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <LoginPage />
+    </Suspense>
   );
 }
