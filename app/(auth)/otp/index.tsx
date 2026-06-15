@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react"; // Added useEffect
 import { ShieldCheck, RefreshCcw, ArrowLeft } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -15,8 +15,17 @@ export default function OtpPage() {
   const { toast } = useToast();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
 
-  const email = localStorage.getItem("email") || "";
-  // Using refs instead of document.getElementById for cleaner React code
+  // 1. Initialize email as empty string to safe-guard server-side rendering
+  const [email, setEmail] = useState("");
+
+  // 2. Fetch email from localStorage only after the component mounts on the client
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEmail(localStorage.getItem("email") || "");
+    }
+  }, []);
+
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error) return error.message;
@@ -28,7 +37,7 @@ export default function OtpPage() {
     mutationFn: (otpValue: string) =>
       asyncUsersOtpVerification({
         otp: otpValue,
-        email,
+        email, // Uses the safe state variable
       }),
     onSuccess: () => {
       toast("Identity verified!", "success");
@@ -36,7 +45,7 @@ export default function OtpPage() {
     },
     onError: (error) => {
       toast(getErrorMessage(error, "Invalid OTP. Please try again."), "error");
-      setOtp(["", "", "", "", "", ""]); // Clear all 6
+      setOtp(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     },
   });
@@ -44,7 +53,10 @@ export default function OtpPage() {
   const resendMutation = useMutation({
     mutationFn: () =>
       asyncUsersForgetPassword({
-        email: localStorage.getItem("email") || "",
+        email:
+          typeof window !== "undefined"
+            ? localStorage.getItem("email") || ""
+            : "",
       }),
     onSuccess: () => toast("A new code has been sent", "info"),
     onError: () => toast("Failed to resend code", "error"),
@@ -52,18 +64,16 @@ export default function OtpPage() {
 
   const handleChange = (value: string, index: number) => {
     const char = value.slice(-1);
-    if (!/^\d*$/.test(char)) return; // Only allow numbers
+    if (!/^\d*$/.test(char)) return;
 
     const newOtp = [...otp];
     newOtp[index] = char;
     setOtp(newOtp);
 
-    // Move focus forward
     if (char && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when complete
     if (newOtp.every((d) => d !== "")) {
       verifyMutation.mutate(newOtp.join(""));
     }
@@ -83,7 +93,6 @@ export default function OtpPage() {
     }
   };
 
-  // Handle Ctrl+V (Paste)
   const handlePaste = (e: React.ClipboardEvent) => {
     const data = e.clipboardData.getData("text").slice(0, 6);
     if (!/^\d+$/.test(data)) return;
@@ -94,7 +103,6 @@ export default function OtpPage() {
       .slice(0, 6);
     setOtp(newOtp);
 
-    // Focus last filled or next empty
     const nextIndex = data.length < 6 ? data.length : 5;
     inputRefs.current[nextIndex]?.focus();
 
@@ -128,7 +136,7 @@ export default function OtpPage() {
           We sent a <span className="text-primary font-bold">6-digit</span> code
           to{" "}
           <span className="font-semibold text-secondary break-all">
-            {localStorage.getItem("email") || "your email"}
+            {email || "your email"}
           </span>
         </p>
 

@@ -1,7 +1,7 @@
 import { useAuthStore } from "@/stores/useAuthstore";
 import axios from "axios";
 
-export const BASE_URL = "https://api.awshta.com";
+export const BASE_URL = "https://awshta.devsment.com";
 export const IMAGE_URL = "https://awshta.com/";
 // export const BASE_URL = 'http://localhost:8080'
 

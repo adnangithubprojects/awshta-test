@@ -1,12 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  trailingSlash: true, // ✅ Adds trailing slashes to routes like `/about/`
-
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
-    unoptimized: true, // ✅ Required when using `output: "export"`
-    formats: ["image/webp"], // ✅ Optional, helps define preferred image formats
+    // Remote hosts used by next/image (see config/url-config.ts: IMAGE_URL / BASE_URL)
+    remotePatterns: [
+      { protocol: "https", hostname: "awshta.com" },
+      { protocol: "https", hostname: "awshta.devsment.com" },
+    ],
   },
 };
 

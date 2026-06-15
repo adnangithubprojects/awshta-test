@@ -77,7 +77,7 @@ export const ReviewsAndProductInspectorPage = memo(
         [];
 
     // --- Query 2: Contextual Reviews Cache Hook (Only runs when a product is chosen)
-    const { data: reviewData, isLoading: reviewsLoading } =
+    const { data: reviewResponse, isLoading: reviewsLoading } =
       useGetProductReviews(
         selectedProduct?.id || "",
         {
@@ -87,7 +87,14 @@ export const ReviewsAndProductInspectorPage = memo(
         // Prevent query firing if no target selected
         { enabled: !!selectedProduct?.id },
       );
-    console.log("rev", reviewData);
+
+    // ✅ Safe fallback check for data structure to prevent compilation exceptions
+    const reviewData = Array.isArray(reviewResponse)
+      ? reviewResponse
+      : reviewResponse?.items || reviewResponse?.data || [];
+
+    const totalReviews = reviewResponse?.total || reviewData?.length || 0;
+    const totalPages = reviewResponse?.pages || 0;
 
     const createMutation = useCreateReview();
     const updateMutation = useUpdateReview();
@@ -114,12 +121,6 @@ export const ReviewsAndProductInspectorPage = memo(
     const handleUpdate = (data: any) => {
       const { product_id, ...cleanedData } = data;
 
-      // 2. Re-attach product_id only if it contains a valid, non-empty value
-      const finalPayload = {
-        ...cleanedData,
-        ...(product_id && product_id.trim() !== "" ? { product_id } : {}),
-      };
-      console.log("cehck cekc");
       updateMutation.mutate(
         { id: editReview.id, data: cleanedData },
         {
@@ -148,7 +149,7 @@ export const ReviewsAndProductInspectorPage = memo(
 
     return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[calc(100vh-100px)] items-start">
-        {/* LEFT COLUMN: Products Navigator Panel (Takes 4 cols) */}
+        {/* LEFT COLUMN: Products Navigator Panel */}
         <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-100 p-5 space-y-4 shadow-sm self-stretch">
           <div>
             <h2 className="text-base font-black text-primary tracking-tight">
@@ -177,7 +178,7 @@ export const ReviewsAndProductInspectorPage = memo(
                     key={product.id}
                     onClick={() => {
                       setSelectedProduct(product);
-                      setReviewPage(1); // Reset page selection on view swap
+                      setReviewPage(1);
                     }}
                     className={`w-full flex items-center justify-between p-3.5 rounded-xl border text-left transition-all group cursor-pointer ${
                       isCurrent
@@ -235,7 +236,7 @@ export const ReviewsAndProductInspectorPage = memo(
           )}
         </div>
 
-        {/* RIGHT COLUMN: Active Details & Reviews Engine (Takes 8 cols) */}
+        {/* RIGHT COLUMN: Active Details & Reviews Engine */}
         <div className="lg:col-span-8 space-y-5">
           {!selectedProduct ? (
             <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[2rem] border border-slate-100 text-center p-6 shadow-sm">
@@ -253,7 +254,6 @@ export const ReviewsAndProductInspectorPage = memo(
             </div>
           ) : (
             <>
-              {/* Dynamic Integrated Info Header Banner */}
               <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
                 <div className="flex justify-between items-start flex-wrap gap-4">
                   <div>
@@ -272,7 +272,6 @@ export const ReviewsAndProductInspectorPage = memo(
                   </button>
                 </div>
 
-                {/* Extended Real-time Details Log Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-50 text-xs">
                   <div className="bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/50">
                     <p className="text-slate-400 font-medium text-[10px]">
@@ -323,10 +322,10 @@ export const ReviewsAndProductInspectorPage = memo(
                 )}
               </div>
 
-              {/* Dynamic Product Specific Feedback Sub-Index List */}
               <div className="space-y-4">
+                {/* ✅ Safe reference using safe total calculation variable */}
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-                  Customer Responses ({reviewData?.total || 0})
+                  Customer Responses ({totalReviews})
                 </h3>
 
                 {reviewsLoading ? (
@@ -396,13 +395,13 @@ export const ReviewsAndProductInspectorPage = memo(
                       </div>
                     ))}
 
-                    {reviewData?.pages > 1 && (
+                    {totalPages > 1 && (
                       <Pagination
                         meta={{
-                          totalItems: reviewData.total,
-                          currentPage: reviewData.page,
-                          totalPages: reviewData.pages,
-                          perPage: reviewData.per_page || 5,
+                          totalItems: totalReviews,
+                          currentPage: reviewResponse?.page || 1,
+                          totalPages: totalPages,
+                          perPage: reviewResponse?.per_page || 5,
                         }}
                         onPageChange={setReviewPage}
                       />
