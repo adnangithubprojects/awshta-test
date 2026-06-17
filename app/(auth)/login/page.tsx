@@ -20,7 +20,7 @@ const loginSchema = z.object({
 
 type TLoginForm = z.infer<typeof loginSchema>;
 
-function LoginPage() {
+function LoginContent() {
   const { setAuth, access_token } = useAuthStore();
   const navigate = useRouter();
   const searchParams = useSearchParams();
@@ -148,10 +148,16 @@ function LoginPage() {
   );
 }
 
-export default function Page() {
+// useSearchParams() requires a Suspense boundary under `output: export` (all pages
+// are prerendered). Wrapping the content here satisfies the CSR-bailout requirement.
+export default function LoginPage() {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
-      <LoginPage />
+    <Suspense
+      fallback={
+        <div className="h-screen w-screen bg-[#F8FAFC] flex items-center justify-center p-6" />
+      }
+    >
+      <LoginContent />
     </Suspense>
   );
 }
